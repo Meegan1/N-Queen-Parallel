@@ -20,7 +20,7 @@ public:
     explicit ThreadSafeStack() = default;
 
 
-    void push(T &new_value) {
+    void push(T new_value) {
         std::lock_guard<std::mutex> lock(gate);
         stack.push(new_value);
     }
