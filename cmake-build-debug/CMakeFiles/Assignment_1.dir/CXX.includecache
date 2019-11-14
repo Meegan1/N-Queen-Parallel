@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/meegan1/Documents/University/Assignments/Parallel and Concurrent Programming/Assignment 1/Solver.cpp
+Solver.h
+/Users/meegan1/Documents/University/Assignments/Parallel and Concurrent Programming/Assignment 1/Solver.h
+
+/Users/meegan1/Documents/University/Assignments/Parallel and Concurrent Programming/Assignment 1/Solver.h
+thread
+-
+vector
+-
+iostream
+-
+ThreadSafeStack.h
+/Users/meegan1/Documents/University/Assignments/Parallel and Concurrent Programming/Assignment 1/ThreadSafeStack.h
+
+/Users/meegan1/Documents/University/Assignments/Parallel and Concurrent Programming/Assignment 1/ThreadSafeStack.h
+stack
+-
+mutex
+-
+
