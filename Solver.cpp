@@ -27,15 +27,13 @@ Solver::~Solver() {
 
 void Solver::wait_and_solve() {
     while(!isComplete.load()) {
+        std::shared_ptr<ProblemState> c_state;
         std::unique_lock<std::mutex> gate(m);
-
         cv.wait(gate,
                 [this] { return !states.isEmpty(); });
-
-        std::shared_ptr<ProblemState> c_state = states.pop();
-
+        c_state = states.pop();
+        gate.unlock();
         solve(c_state);
-
 
 //        if(states.isEmpty())
 //            isComplete.store(true);
@@ -44,12 +42,9 @@ void Solver::wait_and_solve() {
 
 
 int Solver::solve(const std::shared_ptr<ProblemState>& c_state) {
-    std::promise<int> p;
-    c_state->sol = p.get_future();
-
     if(c_state->cols == all) {
-        p.set_value(1);
-        return 1;
+        c_state->sol.set_value(1);
+        return true;
     }
 
     chessboard pos = ~(c_state->ld | c_state->cols | c_state->rd) & all;  // Possible positions for the queen on the current row
@@ -61,15 +56,18 @@ int Solver::solve(const std::shared_ptr<ProblemState>& c_state) {
         next = pos & (-pos);                    // next possible position
         pos -= next;                             // update the possible position
 
-        ProblemState n_state((c_state->ld | next) << 1, c_state->cols | next, (c_state->rd | next) >> 1);
+        std::promise<int> p;
+        ProblemState n_state((c_state->ld | next) << 1, c_state->cols | next, (c_state->rd | next) >> 1,
+                             p);
         states.push(n_state); // recursive call for the `next' position
-        cv.notify_one();
-//
-//            n_state.sol.wait();
-//            sol += n_state.sol.get();
-    }
 
-    p.set_value(sol);
+        cv.notify_one();
+
+        sol += n_state.sol.get_future().get();
+
+    }
+//    c_state->sol.set_value(1);
+    return sol;
 }
 
 
@@ -77,7 +75,8 @@ int Solver::solve(int n_queens) {
     all = (1 << n_queens) - 1;            // set N bits on, representing number of columns
 
     std::lock_guard<std::mutex> gate(m);
-    ProblemState first_state(0, 0, 0);
+    std::promise<int> p;
+    ProblemState first_state(0, 0, 0, p);
     states.push(first_state);
     cv.notify_one();
 

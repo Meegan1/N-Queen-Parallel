@@ -15,9 +15,10 @@
 typedef int chessboard;
 struct ProblemState {
     chessboard ld, cols, rd;
-    std::shared_future<int> sol;
+    std::promise<int> &sol;
 
-    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd) : ld(ld), cols(cols), rd(rd), sol() {}
+    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd, std::promise<int> &sol)
+            : ld(ld), cols(cols), rd(rd), sol(sol) {}
 
 //    ProblemState(const ProblemState &other) = delete;
 //    ProblemState(ProblemState &other) : ld(other.ld), cols(other.cols), rd(other.rd), sol(std::move(other.sol)) {}
