@@ -15,33 +15,33 @@
 typedef int chessboard;
 struct ProblemState {
     chessboard ld, cols, rd;
-    std::promise<int> sol;
+    std::shared_future<int> sol;
 
-    ProblemState(chessboard ld, chessboard cols, chessboard rd) : ld(ld), cols(cols), rd(rd) {}
+    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd) : ld(ld), cols(cols), rd(rd) {}
+//
+//    ProblemState(const ProblemState &other) = delete;
+//    ProblemState(ProblemState &other) : ld(other.ld), cols(other.cols), rd(other.rd), sol(std::move(other.sol)) {}
 };
 
 class Solver {
 public:
-    explicit Solver(int n_queens, int n_threads);
-
+    explicit Solver(int n_threads);
     ~Solver();
 
-    static void loop() {
-        for(int i = 0; i < 1000; i++) {
-//            std::cout << i << std::endl;
-        }
-    }
+    int solve(int n_queens);
+
 private:
     int n_threads;
-    int n_queens;
     time_t start_time;
     time_t end_time;
+
+    chessboard all;
 
     std::vector<std::thread> threads;
     std::mutex m;
     std::condition_variable cv;
     std::atomic<bool> isComplete;
-    ThreadSafeStack<int> states;
+    ThreadSafeStack<ProblemState> states;
 
     void wait_and_solve();
 };
@@ -52,7 +52,7 @@ private:
 //        wait_and_solve();
 //    }
 //    void wait_and_solve() {
-////        states.pop();
+//        states.pop();
 //    };
 //};
 

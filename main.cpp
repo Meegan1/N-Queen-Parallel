@@ -48,7 +48,8 @@ int main(int argc, char **argv) {
 
     std::cout << "Number of Solutions to " << qn << "-Queen problem is : " << sol << std::endl;
 
-    Solver solver(qn, tn);
+    Solver solver(tn);
+    solver.solve(qn);
 
     return 0;
 }
