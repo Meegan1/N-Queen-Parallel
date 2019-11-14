@@ -44,6 +44,7 @@ private:
     ThreadSafeStack<ProblemState> states;
 
     void wait_and_solve();
+    int solve(const std::shared_ptr<ProblemState>& c_state);
 };
 
 //class SolverThread {

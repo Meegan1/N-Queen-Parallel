@@ -34,38 +34,44 @@ void Solver::wait_and_solve() {
 
         std::shared_ptr<ProblemState> c_state = states.pop();
 
-        std::promise<int> p;
-        c_state->sol = p.get_future();
-
-        if(c_state->cols == all) {
-            p.set_value(1);
-            continue;
-        }
-
-        chessboard pos = ~(c_state->ld | c_state->cols | c_state->rd) & all;  // Possible positions for the queen on the current row
-        chessboard next;
-        int sol = 0;
-
-
-        while (pos != 0) {                          // Iterate over all possible positions and solve the (N-1)-queen in each case
-            next = pos & (-pos);                    // next possible position
-            pos -= next;                             // update the possible position
-
-            ProblemState n_state((c_state->ld | next) << 1, c_state->cols | next, (c_state->rd | next) >> 1);
-            states.push(n_state); // recursive call for the `next' position
-            cv.notify_one();
-//
-//            n_state.sol.wait();
-//            sol += n_state.sol.get();
-        }
-
-        p.set_value(sol);
+        solve(c_state);
 
 
 //        if(states.isEmpty())
 //            isComplete.store(true);
     }
 }
+
+
+int Solver::solve(const std::shared_ptr<ProblemState>& c_state) {
+    std::promise<int> p;
+    c_state->sol = p.get_future();
+
+    if(c_state->cols == all) {
+        p.set_value(1);
+        return 1;
+    }
+
+    chessboard pos = ~(c_state->ld | c_state->cols | c_state->rd) & all;  // Possible positions for the queen on the current row
+    chessboard next;
+    int sol = 0;
+
+
+    while (pos != 0) {                          // Iterate over all possible positions and solve the (N-1)-queen in each case
+        next = pos & (-pos);                    // next possible position
+        pos -= next;                             // update the possible position
+
+        ProblemState n_state((c_state->ld | next) << 1, c_state->cols | next, (c_state->rd | next) >> 1);
+        states.push(n_state); // recursive call for the `next' position
+        cv.notify_one();
+//
+//            n_state.sol.wait();
+//            sol += n_state.sol.get();
+    }
+
+    p.set_value(sol);
+}
+
 
 int Solver::solve(int n_queens) {
     all = (1 << n_queens) - 1;            // set N bits on, representing number of columns
