@@ -10,7 +10,7 @@
 #include <vector>
 #include <iostream>
 #include <future>
-#include "ThreadSafeStack.h"
+#include "ThreadSafeQueue.h"
 
 typedef int chessboard;
 struct ProblemState {
@@ -19,6 +19,18 @@ struct ProblemState {
 
     explicit ProblemState(chessboard ld, chessboard cols, chessboard rd)
             : ld(ld), cols(cols), rd(rd) {}
+
+    ProblemState(const ProblemState & other) = delete;
+    ProblemState(ProblemState && other) : ld(other.ld), cols(other.cols), rd(other.rd), promise(std::move(other.promise)) {}
+
+    void operator()(ProblemState && other) {
+        ld = other.ld;
+        cols = other.cols;
+        rd = other.rd;
+        promise = std::move(other.promise);
+    }
+
+    ~ProblemState() = default;
 };
 
 class Solver {
@@ -36,12 +48,13 @@ private:
     chessboard all;
 
     std::vector<std::thread> threads;
-    ThreadSafeStack<std::shared_ptr<ProblemState>> states;
-    ThreadSafeStack<std::shared_future<int>> futures;
+    ThreadSafeQueue<ProblemState> states;
+    ThreadSafeQueue<std::shared_future<int>> futures;
 
     void wait_and_solve();
-    void solve(const std::shared_ptr<ProblemState>& c_state);
-    int nqueen(const std::shared_ptr<ProblemState>& state, int level);
+    void solve(ProblemState &&c_state);
+    int nqueen(ProblemState &&state, int level, int is_sequential = false);
+//    int seq_nqueen(int ld, int col, int rd, int level);
 };
 
 //class SolverThread {
