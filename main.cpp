@@ -44,7 +44,16 @@ int main(int argc, char **argv) {
     int qn = std::stoi(argv[1]);
     int tn = std::stoi(argv[2]);
 
+
+
+    time_t start_time;
+    time_t end_time;
+    time(&start_time);
+
     int sol = nqueen_solver(qn);
+
+    time(&end_time);
+    std::cout << "Total Time Elapsed: " << end_time - start_time << "s" << std::endl;
 
     std::cout << "Number of Solutions to " << qn << "-Queen problem is : " << sol << std::endl;
 

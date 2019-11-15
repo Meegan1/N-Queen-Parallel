@@ -5,8 +5,6 @@
 #include "Solver.h"
 
 Solver::Solver(int n_threads) : n_threads(n_threads), start_time(0), end_time(0), isComplete(false) {
-    time(&start_time);
-
     // spawn threads
     for (int i = 0; i < n_threads; i++) {
         threads.emplace_back(&Solver::wait_and_solve, this);
@@ -30,7 +28,10 @@ void Solver::wait_and_solve() {
         std::shared_ptr<ProblemState> c_state;
         std::unique_lock<std::mutex> gate(m);
         cv.wait(gate,
-                [this] { return !states.isEmpty(); });
+                [this] { return !states.isEmpty() || isComplete.load(); });
+        if(isComplete.load())
+            return;
+
         c_state = states.pop();
         gate.unlock();
         solve(c_state);
@@ -60,26 +61,32 @@ int Solver::solve(const std::shared_ptr<ProblemState>& c_state) {
         ProblemState n_state((c_state->ld | next) << 1, c_state->cols | next, (c_state->rd | next) >> 1,
                              p);
         states.push(n_state); // recursive call for the `next' position
-
         cv.notify_one();
 
         sol += n_state.sol.get_future().get();
 
     }
-//    c_state->sol.set_value(1);
+    c_state->sol.set_value(sol);
+
     return sol;
 }
 
 
 int Solver::solve(int n_queens) {
+    time(&start_time);
     all = (1 << n_queens) - 1;            // set N bits on, representing number of columns
 
-    std::lock_guard<std::mutex> gate(m);
     std::promise<int> p;
     ProblemState first_state(0, 0, 0, p);
-    states.push(first_state);
-    cv.notify_one();
 
+    {
+        std::lock_guard<std::mutex> gate(m);
+        states.push(first_state);
+        cv.notify_one();
+    }
 
+    std::cout << "Number of Solutions: " << first_state.sol.get_future().get() << std::endl;
+    isComplete = true;
+    cv.notify_all();
     return 0;
 }
