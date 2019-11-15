@@ -15,6 +15,7 @@
 typedef int chessboard;
 struct ProblemState {
     chessboard ld, cols, rd;
+    std::promise<int> promise;
 
     explicit ProblemState(chessboard ld, chessboard cols, chessboard rd)
             : ld(ld), cols(cols), rd(rd) {}
@@ -38,13 +39,12 @@ private:
     std::mutex m;
     std::condition_variable cv;
     bool is_complete;
-    ThreadSafeStack<ProblemState> states;
-    ThreadSafeStack<std::promise<int>> promises;
+    ThreadSafeStack<std::shared_ptr<ProblemState>> states;
     ThreadSafeStack<std::shared_future<int>> futures;
 
     void wait_and_solve();
-    void solve(ProblemState c_state);
-    void nqueen(chessboard ld, chessboard cols, chessboard rd, int level);
+    void solve(std::shared_ptr<ProblemState> c_state);
+    void nqueen(const std::shared_ptr<ProblemState>& state, int level);
 };
 
 //class SolverThread {

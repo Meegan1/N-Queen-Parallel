@@ -33,28 +33,25 @@ Solver::~Solver() {
 
 void Solver::wait_and_solve() {
     while(!is_complete) {
-        ProblemState c_state = *states.wait_and_pop();
-        solve(c_state);
+        solve(*states.wait_and_pop());
     }
 }
 
 
-void Solver::solve(ProblemState c_state) {
-    nqueen(c_state.ld, c_state.cols, c_state.rd, 6);
+void Solver::solve(std::shared_ptr<ProblemState> c_state) {
+    nqueen(c_state, 6);
 }
 
-void Solver::nqueen(chessboard ld, chessboard cols, chessboard rd, int level) {
+void Solver::nqueen(const std::shared_ptr<ProblemState>& state, int level) {
     int sol = 0;
 
-    if (cols == all) {                            // A solution is found
-        std::promise<int> promise;
-        promise.set_value(1);
-        futures.push(promise.get_future());
-        promises.push(std::move(promise));
+    if (state->cols == all) {                            // A solution is found
+        state->promise.set_value(1);
+        futures.push(state->promise.get_future());
         return;
     }
 
-    chessboard pos = ~(ld | cols | rd) & all;  // Possible posstions for the queen on the current row
+    chessboard pos = ~(state->ld | state->cols | state->rd) & all;  // Possible posstions for the queen on the current row
     chessboard next;
 
     while (pos != 0) {                          // Iterate over all possible positions and solve the (N-1)-queen in each case
@@ -62,10 +59,12 @@ void Solver::nqueen(chessboard ld, chessboard cols, chessboard rd, int level) {
         pos -= next;                             // update the possible position
 
         if(level <= 5) {
-            nqueen((ld | next) << 1, cols | next, (rd | next) >> 1, level + 1); // recursive call for the `next' position
+            std::shared_ptr<ProblemState> problem(std::make_shared<ProblemState>(ProblemState((state->ld | next) << 1, state->cols | next, (state->rd | next) >> 1)));
+            nqueen(problem, level + 1); // recursive call for the `next' position
         }
         else {
-            states.push(ProblemState((ld | next) << 1, cols | next, (rd | next) >> 1));
+            std::shared_ptr<ProblemState> problem(std::make_shared<ProblemState>(ProblemState((state->ld | next) << 1, state->cols | next, (state->rd | next) >> 1)));
+            states.push(problem);
 
             std::unique_lock<std::mutex> gate(m);
             cv.notify_one();
@@ -79,7 +78,8 @@ int Solver::solve(int n_queens) {
     time(&start_time);
     all = (1 << n_queens) - 1;            // set N bits on, representing number of columns
 
-    nqueen(0, 0, 0, 0);
+    std::shared_ptr<ProblemState> problem(std::make_shared<ProblemState>(0, 0, 0));
+    nqueen(problem, 0);
 
 //    is_complete = true;
 //    cv.notify_all();
