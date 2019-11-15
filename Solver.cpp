@@ -81,7 +81,7 @@ int Solver::solve(int n_queens) {
 
     nqueen(0, 0, 0, 0);
 
-    is_complete = true;
-    cv.notify_all();
+//    is_complete = true;
+//    cv.notify_all();
     return 0;
 }
