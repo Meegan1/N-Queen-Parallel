@@ -20,9 +20,11 @@ public:
     explicit ThreadSafeStack() = default;
 
 
-    void push(T new_value) {
+    std::future<int> push(T &&new_value) {
         std::lock_guard<std::mutex> lock(gate);
-        stack.push(new_value);
+        std::future<int> future(new_value.sol.get_future());
+        stack.emplace(new_value);
+        return future;
     }
 
     std::shared_ptr<T> pop() {
@@ -33,18 +35,6 @@ public:
         std::shared_ptr<T> const res(std::make_shared<T>(stack.top()));
         stack.pop();
         return res;
-    }
-    void pop(T &value) {
-        std::lock_guard<std::mutex> lock(gate);
-        if(stack.empty())
-            throw empty_stack();
-
-        value = stack.top();
-        stack.pop();
-    }
-    void empty() {
-        std::lock_guard<std::mutex> lock(gate);
-        stack.empty();
     }
 
     bool isEmpty() {

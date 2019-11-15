@@ -4,7 +4,7 @@
 
 #include "Solver.h"
 
-Solver::Solver(int n_threads) : n_threads(n_threads), start_time(0), end_time(0), isComplete(false) {
+Solver::Solver(int n_threads) : n_threads(n_threads), start_time(0), end_time(0), is_complete(false) {
     // spawn threads
     for (int i = 0; i < n_threads; i++) {
         threads.emplace_back(&Solver::wait_and_solve, this);
@@ -24,20 +24,17 @@ Solver::~Solver() {
 }
 
 void Solver::wait_and_solve() {
-    while(!isComplete.load()) {
+    while(!is_complete.load()) {
         std::shared_ptr<ProblemState> c_state;
         std::unique_lock<std::mutex> gate(m);
         cv.wait(gate,
-                [this] { return !states.isEmpty() || isComplete.load(); });
-        if(isComplete.load())
+                [this] { return !states.isEmpty() || is_complete.load(); });
+        if(is_complete.load())
             return;
 
         c_state = states.pop();
         gate.unlock();
         solve(c_state);
-
-//        if(states.isEmpty())
-//            isComplete.store(true);
     }
 }
 
@@ -60,10 +57,10 @@ int Solver::solve(const std::shared_ptr<ProblemState>& c_state) {
         std::promise<int> p;
         ProblemState n_state((c_state->ld | next) << 1, c_state->cols | next, (c_state->rd | next) >> 1,
                              p);
-        states.push(n_state); // recursive call for the `next' position
+        std::future<int> future(states.push(std::move(n_state))); // recursive call for the `next' position
         cv.notify_one();
 
-        sol += n_state.sol.get_future().get();
+        sol += future.get();
 
     }
     c_state->sol.set_value(sol);
@@ -78,15 +75,16 @@ int Solver::solve(int n_queens) {
 
     std::promise<int> p;
     ProblemState first_state(0, 0, 0, p);
+    std::future<int> future;
 
     {
         std::lock_guard<std::mutex> gate(m);
-        states.push(first_state);
+        future = states.push(std::move(first_state));
         cv.notify_one();
     }
 
-    std::cout << "Number of Solutions: " << first_state.sol.get_future().get() << std::endl;
-    isComplete = true;
+    std::cout << "Number of Solutions: " << future.get() << std::endl;
+    is_complete = true;
     cv.notify_all();
     return 0;
 }
