@@ -36,9 +36,6 @@ private:
     chessboard all;
 
     std::vector<std::thread> threads;
-    std::mutex m;
-    std::condition_variable cv;
-    bool is_complete;
     ThreadSafeStack<std::shared_ptr<ProblemState>> states;
     ThreadSafeStack<std::shared_future<int>> futures;
 

@@ -4,7 +4,7 @@
 
 #include "Solver.h"
 
-Solver::Solver(int n_threads) : n_threads(n_threads), start_time(0), end_time(0), is_complete(false) {
+Solver::Solver(int n_threads) : n_threads(n_threads), start_time(0), end_time(0) {
     // spawn threads
     for (int i = 0; i < n_threads; i++) {
         threads.emplace_back(&Solver::wait_and_solve, this);
@@ -25,17 +25,18 @@ Solver::~Solver() {
 }
 
 void Solver::wait_and_solve() {
-    while(!is_complete) {
+    while(true) {
         std::shared_ptr<ProblemState> state;
-        if(states.try_pop(state)) {
+        if(states.wait_and_pop(state))
             solve(state);
-        }
+        else
+            return;
     }
 }
 
 
 void Solver::solve(const std::shared_ptr<ProblemState> &c_state) {
-    nqueen(c_state, 6);
+    nqueen(c_state, 14);
 }
 
 int Solver::nqueen(const std::shared_ptr<ProblemState> &state, int level) {
@@ -56,22 +57,15 @@ int Solver::nqueen(const std::shared_ptr<ProblemState> &state, int level) {
         std::shared_ptr<ProblemState> problem(std::make_shared<ProblemState>(
                 ProblemState((state->ld | next) << 1, state->cols | next, (state->rd | next) >> 1)));
 
-        if (level <= 5) {
+        if (level < 13) {
             sol += nqueen(problem, level + 1); // recursive call for the `next' position
         } else {
             states.push(problem);
-            std::future_status status;
             std::shared_future<int> future(problem->promise.get_future());
 
-            do {
-                status = future.wait_for(std::chrono::microseconds(1));
-                std::shared_ptr<ProblemState> next_state;
-                if(states.try_pop(next_state)) {
-                    solve(next_state);
-                }
+            while (future.wait_for(std::chrono::milliseconds(1)) != std::future_status::ready) {
+                wait_and_solve();
             }
-            while(status != std::future_status::ready);
-
             sol += future.get();
         }
     }
@@ -86,11 +80,11 @@ int Solver::solve(int n_queens) {
     all = (1 << n_queens) - 1;            // set N bits on, representing number of columns
 
     std::shared_ptr<ProblemState> problem(std::make_shared<ProblemState>(0, 0, 0));
+//    states.push(problem);
     nqueen(problem, 0);
 
     std::cout << "Number of Solutions: " << problem->promise.get_future().get() << std::endl;
 
-    is_complete = true;
-    cv.notify_all();
+    states.complete();
     return 0;
 }

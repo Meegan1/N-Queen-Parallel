@@ -24,26 +24,23 @@ public:
         std::lock_guard<std::mutex> lock(gate);
         stack.emplace(new_value);
         cv.notify_one();
-        size = stack.size();
-
     }
 
     void push(T &&new_value) {
         std::lock_guard<std::mutex> lock(gate);
         stack.emplace(std::move(new_value));
         cv.notify_one();
-        size = stack.size();
-
     }
 
-    void wait_and_pop(T &val) {
+    bool wait_and_pop(T &val) {
         std::unique_lock<std::mutex> lock(gate);
         cv.wait(lock,
-                [this]{ return !stack.empty(); });
+                [this]{ return !stack.empty() || is_complete; });
+        if(is_complete)
+            return false;
         val = stack.top();
         stack.pop();
-        size = stack.size();
-
+        return true;
     }
 
     std::shared_ptr<T> wait_and_pop() {
@@ -53,8 +50,6 @@ public:
 
         std::shared_ptr<T> const res(std::make_shared<T>(stack.top()));
         stack.pop();
-        size = stack.size();
-
         return res;
     }
 
@@ -64,22 +59,24 @@ public:
         if (stack.empty()) return false;
         val = stack.top();
         stack.pop();
-        size = stack.size();
-
         return true;
     }
 
     bool isEmpty() {
         std::lock_guard<std::mutex> lock(gate);
-        size = stack.size();
         return stack.empty();
+    }
+
+    void complete() {
+        is_complete = true;
+        cv.notify_all();
     }
 
 private:
     std::stack<T> stack;
     std::mutex gate;
     std::condition_variable cv;
-    int size;
+    bool is_complete;
 };
 
 
