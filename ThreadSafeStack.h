@@ -20,58 +20,65 @@ public:
     explicit ThreadSafeStack() = default;
 
 
-    void push(T new_value) {
+    void push(T &new_value) {
         std::lock_guard<std::mutex> lock(gate);
         stack.emplace(new_value);
+        cv.notify_one();
         size = stack.size();
+
     }
 
-    void emplace() {
+    void push(T &&new_value) {
         std::lock_guard<std::mutex> lock(gate);
-        stack.emplace();
+        stack.emplace(std::move(new_value));
+        cv.notify_one();
         size = stack.size();
+
     }
 
-    T &emplace_and_get() {
-        std::lock_guard<std::mutex> lock(gate);
-        stack.emplace();
-        size = stack.size();
-        return stack.top();
-    }
-
-    T pop() {
-        std::lock_guard<std::mutex> lock(gate);
-        if (stack.empty())
-            throw empty_stack();
-
-        T &res = stack.top();
+    void wait_and_pop(T &val) {
+        std::unique_lock<std::mutex> lock(gate);
+        cv.wait(lock,
+                [this]{ return !stack.empty(); });
+        val = stack.top();
         stack.pop();
         size = stack.size();
+
+    }
+
+    std::shared_ptr<T> wait_and_pop() {
+        std::unique_lock<std::mutex> lock(gate);
+        cv.wait(lock,
+                [this]{ return !stack.empty(); });
+
+        std::shared_ptr<T> const res(std::make_shared<T>(stack.top()));
+        stack.pop();
+        size = stack.size();
+
         return res;
     }
 
-    void pop_back() {
+    bool try_pop(T& val)
+    {
         std::lock_guard<std::mutex> lock(gate);
-        if (stack.empty())
-            throw empty_stack();
-        size = stack.size();
+        if (stack.empty()) return false;
+        val = stack.front();
         stack.pop();
-    }
-
-    T &top() {
-        std::lock_guard<std::mutex> lock(gate);
         size = stack.size();
-        return stack.top();
+
+        return true;
     }
 
     bool isEmpty() {
         std::lock_guard<std::mutex> lock(gate);
+        size = stack.size();
         return stack.empty();
     }
 
 private:
     std::stack<T> stack;
     std::mutex gate;
+    std::condition_variable cv;
     int size;
 };
 

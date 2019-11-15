@@ -21,8 +21,7 @@ Solver::~Solver() {
 
     int sol = 0;
     while(!futures.isEmpty()) {
-        sol += futures.top().get();
-        futures.pop_back();
+        sol += (*futures.wait_and_pop()).get();
     }
 
     std::cout << "Number of Solutions: " << sol << std::endl;
@@ -34,32 +33,24 @@ Solver::~Solver() {
 
 void Solver::wait_and_solve() {
     while(!is_complete) {
-        std::unique_lock<std::mutex> gate(m);
-
-        cv.wait(gate,
-                [this] { return !states.isEmpty() || is_complete; });
-
-        if(is_complete)
-            return;
-        ProblemState c_state = states.pop();
-        gate.unlock();
-
+        ProblemState c_state = *states.wait_and_pop();
         solve(c_state);
     }
 }
 
 
-int Solver::solve(ProblemState c_state) {
+void Solver::solve(ProblemState c_state) {
     nqueen(c_state.ld, c_state.cols, c_state.rd, 6);
 }
 
 void Solver::nqueen(chessboard ld, chessboard cols, chessboard rd, int level) {
     int sol = 0;
-    std::promise<int> &promise = promises.emplace_and_get();
-    futures.push(promise.get_future());
 
     if (cols == all) {                            // A solution is found
+        std::promise<int> promise;
         promise.set_value(1);
+        futures.push(promise.get_future());
+        promises.push(std::move(promise));
         return;
     }
 
@@ -81,8 +72,6 @@ void Solver::nqueen(chessboard ld, chessboard cols, chessboard rd, int level) {
             gate.unlock();
         }
     }
-
-    promise.set_value(sol);
 }
 
 

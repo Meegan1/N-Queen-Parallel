@@ -43,7 +43,7 @@ private:
     ThreadSafeStack<std::shared_future<int>> futures;
 
     void wait_and_solve();
-    int solve(ProblemState c_state);
+    void solve(ProblemState c_state);
     void nqueen(chessboard ld, chessboard cols, chessboard rd, int level);
 };
 
