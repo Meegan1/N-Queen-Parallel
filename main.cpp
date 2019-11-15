@@ -50,12 +50,12 @@ int main(int argc, char **argv) {
     time_t end_time;
     time(&start_time);
 
-    int sol = nqueen_solver(qn);
+//    int sol = nqueen_solver(qn);
 
     time(&end_time);
     std::cout << "Total Time Elapsed: " << end_time - start_time << "s" << std::endl;
 
-    std::cout << "Number of Solutions to " << qn << "-Queen problem is : " << sol << std::endl;
+//    std::cout << "Number of Solutions to " << qn << "-Queen problem is : " << sol << std::endl;
 
     Solver solver(tn);
     solver.solve(qn);

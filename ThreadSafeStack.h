@@ -26,6 +26,19 @@ public:
         size = stack.size();
     }
 
+    void emplace() {
+        std::lock_guard<std::mutex> lock(gate);
+        stack.emplace();
+        size = stack.size();
+    }
+
+    T &emplace_and_get() {
+        std::lock_guard<std::mutex> lock(gate);
+        stack.emplace();
+        size = stack.size();
+        return stack.top();
+    }
+
     T pop() {
         std::lock_guard<std::mutex> lock(gate);
         if (stack.empty())
@@ -35,6 +48,20 @@ public:
         stack.pop();
         size = stack.size();
         return res;
+    }
+
+    void pop_back() {
+        std::lock_guard<std::mutex> lock(gate);
+        if (stack.empty())
+            throw empty_stack();
+        size = stack.size();
+        stack.pop();
+    }
+
+    T &top() {
+        std::lock_guard<std::mutex> lock(gate);
+        size = stack.size();
+        return stack.top();
     }
 
     bool isEmpty() {

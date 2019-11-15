@@ -15,10 +15,9 @@
 typedef int chessboard;
 struct ProblemState {
     chessboard ld, cols, rd;
-    std::promise<int> *sol;
 
-    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd, std::promise<int> *sol)
-            : ld(ld), cols(cols), rd(rd), sol(sol) {}
+    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd)
+            : ld(ld), cols(cols), rd(rd) {}
 };
 
 class Solver {
@@ -40,10 +39,12 @@ private:
     std::condition_variable cv;
     bool is_complete;
     ThreadSafeStack<ProblemState> states;
+    ThreadSafeStack<std::promise<int>> promises;
+    ThreadSafeStack<std::shared_future<int>> futures;
 
     void wait_and_solve();
     int solve(ProblemState c_state);
-    std::shared_future<int> nqueen(chessboard ld, chessboard cols, chessboard rd, int level);
+    void nqueen(chessboard ld, chessboard cols, chessboard rd, int level);
 };
 
 //class SolverThread {
