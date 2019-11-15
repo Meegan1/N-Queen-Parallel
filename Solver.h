@@ -43,8 +43,8 @@ private:
     ThreadSafeStack<std::shared_future<int>> futures;
 
     void wait_and_solve();
-    void solve(std::shared_ptr<ProblemState> c_state);
-    void nqueen(const std::shared_ptr<ProblemState>& state, int level);
+    void solve(const std::shared_ptr<ProblemState>& c_state);
+    int nqueen(const std::shared_ptr<ProblemState>& state, int level);
 };
 
 //class SolverThread {

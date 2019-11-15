@@ -62,7 +62,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(gate);
         if (stack.empty()) return false;
-        val = stack.front();
+        val = stack.top();
         stack.pop();
         size = stack.size();
 
