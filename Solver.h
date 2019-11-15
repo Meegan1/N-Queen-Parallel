@@ -19,9 +19,6 @@ struct ProblemState {
 
     explicit ProblemState(chessboard ld, chessboard cols, chessboard rd, std::promise<int> *sol)
             : ld(ld), cols(cols), rd(rd), sol(sol) {}
-//
-//    ProblemState(const ProblemState &other) = delete;
-//    ProblemState(ProblemState &other) : ld(other.ld), cols(other.cols), rd(other.rd), sol(std::move(other.sol)) {}
 };
 
 class Solver {
@@ -45,7 +42,7 @@ private:
     ThreadSafeStack<ProblemState> states;
 
     void wait_and_solve();
-    int solve(ProblemState & c_state);
+    int solve(ProblemState c_state);
     std::shared_future<int> nqueen(chessboard ld, chessboard cols, chessboard rd, int level);
 };
 

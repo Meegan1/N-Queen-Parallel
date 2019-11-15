@@ -26,77 +26,62 @@ Solver::~Solver() {
 void Solver::wait_and_solve() {
     while(!is_complete) {
         std::unique_lock<std::mutex> gate(m);
+
         cv.wait(gate,
                 [this] { return !states.isEmpty() || is_complete; });
-            if(is_complete)
-                return;
-            ProblemState c_state = states.pop();
+
+        if(is_complete)
+            return;
+        ProblemState c_state = states.pop();
         gate.unlock();
-        solve(c_state);
+
+        c_state.sol->set_value(solve(c_state));
     }
 }
 
 
-int Solver::solve(ProblemState &c_state) {
-    if(c_state.cols == all) {
-        c_state.sol->set_value(1);
-        return true;
-    }
-
-    chessboard pos = ~(c_state.ld | c_state.cols | c_state.rd) & all;  // Possible positions for the queen on the current row
-    chessboard next;
-    int sol = 0;
-
-//    std::vector<std::promise<int>> promises;
-    while (pos != 0) {                          // Iterate over all possible positions and solve the (N-1)-queen in each case
-        next = pos & (-pos);                    // next possible position
-        pos -= next;                             // update the possible position
-
-        std::promise<int> promise;
-        std::future<int> future(promise.get_future());
-
-        states.push(ProblemState((c_state.ld | next) << 1, c_state.cols | next, (c_state.rd | next) >> 1, &promise)); // recursive call for the `next' position
-        cv.notify_one();
-
-        sol += future.get();
-    }
-
-//    for(unsigned long i = 0; i < promises.size(); i++) {
-//        sol += promises.back().get_future().get();
-//        promises.pop_back();
-//    }
-
-    c_state.sol->set_value(sol);
-    return sol;
+int Solver::solve(ProblemState c_state) {
+    std::shared_future<int> future = nqueen(c_state.ld, c_state.cols, c_state.rd, 6);
+    return future.get();
 }
 
 std::shared_future<int> Solver::nqueen(chessboard ld, chessboard cols, chessboard rd, int level) {
     int sol = 0;
+    std::promise<int> p;
 
     if (cols == all) {                            // A solution is found
-        std::promise<int> p;
         p.set_value(1);
         return std::shared_future<int>(p.get_future());
     }
 
     chessboard pos = ~(ld | cols | rd) & all;  // Possible posstions for the queen on the current row
     chessboard next;
-    while (pos !=
-           0) {                          // Iterate over all possible positions and solve the (N-1)-queen in each case
+
+    std::stack<std::promise<int>> promises;
+    std::stack<std::shared_future<int>> futures;
+    while (pos != 0) {                          // Iterate over all possible positions and solve the (N-1)-queen in each case
         next = pos & (-pos);                    // next possible position
         pos -= next;                             // update the possible position
 
-        if(level <= 5)
-            sol += nqueen((ld | next) << 1, cols | next, (rd | next) >> 1, level + 1).get(); // recursive call for the `next' position
+        if(level <= 5) {
+            futures.emplace(nqueen((ld | next) << 1, cols | next, (rd | next) >> 1, level + 1)); // recursive call for the `next' position
+        }
         else {
-            std::promise<int> promise;
-            std::future<int> future(promise.get_future());
-            states.push(ProblemState((ld | next) << 1, cols | next, (rd | next) >> 1, &promise));
+            promises.emplace();
+            futures.emplace(promises.top().get_future());
+            states.push(ProblemState((ld | next) << 1, cols | next, (rd | next) >> 1, &promises.top()));
+
+            std::unique_lock<std::mutex> gate(m);
             cv.notify_one();
-            sol += future.get();
+            gate.unlock();
         }
     }
-    std::promise<int> p;
+
+    while(!futures.empty()) {
+        sol += futures.top().get();
+        futures.pop();
+    }
+
     p.set_value(sol);
     return std::shared_future<int>(p.get_future());
 }

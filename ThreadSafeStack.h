@@ -22,16 +22,18 @@ public:
 
     void push(T new_value) {
         std::lock_guard<std::mutex> lock(gate);
-        stack.push(new_value);
+        stack.emplace(new_value);
+        size = stack.size();
     }
 
-    T &pop() {
+    T pop() {
         std::lock_guard<std::mutex> lock(gate);
         if (stack.empty())
             throw empty_stack();
 
         T &res = stack.top();
         stack.pop();
+        size = stack.size();
         return res;
     }
 
@@ -43,6 +45,7 @@ public:
 private:
     std::stack<T> stack;
     std::mutex gate;
+    int size;
 };
 
 
