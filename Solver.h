@@ -15,13 +15,13 @@
 typedef int chessboard;
 struct ProblemState {
     chessboard ld, cols, rd;
-    std::promise<int> sol;
+    std::promise<int> *sol;
 
-    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd, std::promise<int> &sol)
-            : ld(ld), cols(cols), rd(rd), sol(std::move(sol)) {}
-
-    ProblemState(const ProblemState &other) = delete;
-    ProblemState(ProblemState &other) : ld(other.ld), cols(other.cols), rd(other.rd), sol(std::move(other.sol)) {}
+    explicit ProblemState(chessboard ld, chessboard cols, chessboard rd, std::promise<int> *sol)
+            : ld(ld), cols(cols), rd(rd), sol(sol) {}
+//
+//    ProblemState(const ProblemState &other) = delete;
+//    ProblemState(ProblemState &other) : ld(other.ld), cols(other.cols), rd(other.rd), sol(std::move(other.sol)) {}
 };
 
 class Solver {
@@ -41,11 +41,12 @@ private:
     std::vector<std::thread> threads;
     std::mutex m;
     std::condition_variable cv;
-    std::atomic<bool> is_complete;
+    bool is_complete;
     ThreadSafeStack<ProblemState> states;
 
     void wait_and_solve();
-    int solve(const std::shared_ptr<ProblemState>& c_state);
+    int solve(ProblemState & c_state);
+    std::shared_future<int> nqueen(chessboard ld, chessboard cols, chessboard rd, int level);
 };
 
 //class SolverThread {
