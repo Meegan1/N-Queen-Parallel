@@ -52,8 +52,12 @@ private:
     ThreadSafeQueue<std::shared_future<int>> futures;
 
     void wait_and_solve();
-    void solve(ProblemState &&c_state);
-    int nqueen(ProblemState &&state, int level, int is_sequential = false);
+    void solve(ProblemState &&state);
+    int seq_nqueen(chessboard ld, chessboard cols, chessboard rd);
+    bool m_shutdown;
+    std::condition_variable m_condition;
+    std::mutex m_mutex;
+    void shutdown();
 //    int seq_nqueen(int ld, int col, int rd, int level);
 };
 

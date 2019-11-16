@@ -21,34 +21,16 @@ public:
     explicit ThreadSafeQueue() = default;
 
 
-    void push(T &new_value) {
-        std::lock_guard<std::mutex> lock(gate);
-        queue.emplace(new_value);
-        cv.notify_one();
-    }
-
     void push(T &&new_value) {
         std::lock_guard<std::mutex> lock(gate);
-        queue.emplace(std::move(new_value));
-        cv.notify_one();
-    }
-
-    bool wait_and_pop(T &val) {
-        std::unique_lock<std::mutex> lock(gate);
-        cv.wait(lock,
-                [this]{ return !queue.empty() || is_complete; });
-        if(is_complete)
-            return false;
-        val(std::move(queue.front()));
-        queue.pop();
-        return true;
+        queue.push(std::move(new_value));
     }
 
     bool try_pop(T& val)
     {
         std::lock_guard<std::mutex> lock(gate);
         if (queue.empty()) return false;
-        val = queue.front();
+        val(std::move(queue.front()));
         queue.pop();
         return true;
     }
@@ -58,16 +40,9 @@ public:
         return queue.empty();
     }
 
-    void complete() {
-        is_complete = true;
-        cv.notify_all();
-    }
-
 private:
     std::queue<T> queue;
     std::mutex gate;
-    std::condition_variable cv;
-    bool is_complete;
 };
 
 
