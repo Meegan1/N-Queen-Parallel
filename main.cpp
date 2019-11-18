@@ -4,12 +4,6 @@
 
 typedef int chessboard;
 
-struct empty_stack: std::exception {
-    const char* what() const throw() {
-        return "Stack is empty";
-    }
-};
-
 template <typename T>
 class ThreadSafeQueue {
 public:
